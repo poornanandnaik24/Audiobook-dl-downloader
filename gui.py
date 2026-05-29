@@ -4,6 +4,7 @@ import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import http.cookiejar
+import webbrowser
 
 try:
     import browser_cookie3
@@ -89,6 +90,9 @@ class App(ctk.CTk):
             self.firefox_button.configure(state="disabled")
             self.auto_cookie_label.configure(text="Auto Import Cookies (browser-cookie3 missing):")
 
+        self.chrome_ext_button = ctk.CTkButton(self.auth_frame, text="Install 'Get cookies.txt locally' Extension for Chrome (Recommended)", fg_color="transparent", border_width=1, command=self.open_chrome_extension)
+        self.chrome_ext_button.grid(row=4, column=0, columnspan=4, padx=10, pady=(0, 10), sticky="ew")
+
         # Output Directory
         self.output_label = ctk.CTkLabel(self, text="Save To:")
         self.output_label.grid(row=3, column=0, padx=20, pady=10, sticky="w")
@@ -155,6 +159,9 @@ class App(ctk.CTk):
         if directory:
             self.output_entry.delete(0, tk.END)
             self.output_entry.insert(0, directory)
+
+    def open_chrome_extension(self):
+        webbrowser.open("https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc")
 
     def append_log(self, text):
         self.log_textbox.configure(state="normal")
