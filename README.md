@@ -26,7 +26,7 @@ You can download the Windows installer from the repository:
 2. **Choose Output Location**: Click "Browse" to select the folder where the audiobook should be saved.
 3. **Authenticate (If Required)**: 
    - **Automatic (Recommended)**: Click **"Login via Embedded Browser"**, sign into your account on the webpage, and then close the browser window. The app will automatically capture your secure login session!
-   - **Manual**: Alternatively, you can enter your basic credentials in the Username/Password fields or use a custom `cookies.txt` file.
+   - **Manual**: Alternatively, you can type your basic credentials directly into the **Username** and **Password** text boxes located right on the main window, or use a custom `cookies.txt` file.
 4. **Download**: Click the **Download** button and watch the live progress in the console log!
 
 ## Building for Mac
