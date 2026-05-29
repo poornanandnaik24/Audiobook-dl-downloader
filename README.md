@@ -20,11 +20,14 @@ You can download the Windows installer from the repository:
 1. Download [Audiobook-dl-Installer.exe](dist/Audiobook-dl-Installer.exe)
 2. Double-click to run the setup. It will install the application and automatically create a desktop shortcut for you!
 
-## How to use
-1. Paste the **URL** of the audiobook you want to download.
-2. Select your output folder.
-3. If the site requires a login, simply click **Login via Embedded Browser**, sign in to the platform, and close the window. Your authentication cookies will be automatically extracted!
-4. Click **Download**. 
+## How to Use
+
+1. **Enter the Audiobook URL**: Paste the link to the audiobook you want to download in the URL field.
+2. **Choose Output Location**: Click "Browse" to select the folder where the audiobook should be saved.
+3. **Authenticate (If Required)**: 
+   - **Automatic (Recommended)**: Click **"Login via Embedded Browser"**, sign into your account on the webpage, and then close the browser window. The app will automatically capture your secure login session!
+   - **Manual**: Alternatively, you can enter your basic credentials in the Username/Password fields or use a custom `cookies.txt` file.
+4. **Download**: Click the **Download** button and watch the live progress in the console log!
 
 ## Building for Mac
 
