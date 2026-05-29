@@ -1,16 +1,73 @@
 import os
 import subprocess
 import threading
+import multiprocessing
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import http.cookiejar
 import webbrowser
+import webview
 
 import customtkinter as ctk
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+def run_webview_process():
+    import webview
+    import time
+    import http.cookiejar
+    import threading
+    import sys
+    
+    extracted_cookies = []
+    window_closed = threading.Event()
+    
+    def tracker(window):
+        window.events.closed += lambda: window_closed.set()
+        while not window_closed.is_set():
+            try:
+                cookies = window.get_cookies()
+                if cookies:
+                    extracted_cookies.clear()
+                    extracted_cookies.extend(cookies)
+            except Exception:
+                pass
+            time.sleep(1)
+    
+    try:
+        window = webview.create_window('Log in, then CLOSE this window', 'https://www.google.com', width=800, height=600)
+        webview.start(tracker, window, private_mode=False)
+        
+        if extracted_cookies:
+            temp_cookie_path = os.path.abspath("temp_webview_cookies.txt")
+            mcj = http.cookiejar.MozillaCookieJar(temp_cookie_path)
+            
+            for c in extracted_cookies:
+                for key, morsel in c.items():
+                    cookie = http.cookiejar.Cookie(
+                        version=0,
+                        name=morsel.key,
+                        value=morsel.value,
+                        port=None, port_specified=False,
+                        domain=morsel['domain'] if morsel['domain'] else '',
+                        domain_specified=bool(morsel['domain']),
+                        domain_initial_dot=morsel['domain'].startswith('.') if morsel['domain'] else False,
+                        path=morsel['path'] if morsel['path'] else '/',
+                        path_specified=bool(morsel['path']),
+                        secure=bool(morsel['secure']),
+                        expires=None,
+                        discard=False,
+                        comment=None, comment_url=None, rest={'HttpOnly': None}, rfc2109=False
+                    )
+                    mcj.set_cookie(cookie)
+            
+            mcj.save(ignore_discard=True, ignore_expires=True)
+    except Exception as e:
+        print(f"Webview error: {e}")
+    finally:
+        sys.exit(0)
 
 class App(ctk.CTk):
     def __init__(self):
@@ -95,80 +152,23 @@ class App(ctk.CTk):
             pass
 
     def open_embedded_browser(self):
-        messagebox.showinfo("Instructions", "A browser window will open.\n\n1. Type the website you want to log into (e.g., https://audiobooks.com) and click Go.\n2. Log in to your account.\n3. CLOSE the browser window to automatically capture the cookies!")
-        
-        threading.Thread(target=self._run_webview_thread, daemon=True).start()
+        # We must use multiprocessing because webview requires a main thread to run its GUI loop.
+        self.webview_button.configure(state="disabled", text="Browser Open...")
+        p = multiprocessing.Process(target=run_webview_process)
+        p.start()
+        threading.Thread(target=self._monitor_webview, args=(p,), daemon=True).start()
 
-    def _run_webview_thread(self):
-        self.after(0, lambda: self.webview_button.configure(state="disabled", text="Browser Open..."))
+    def _monitor_webview(self, process):
+        process.join()
+        self.after(0, lambda: self.webview_button.configure(state="normal", text="Login via Embedded Browser (Gets Cookies)"))
         
-        extracted_cookies = []
-        
-        def tracker(window):
-            import time
-            while True:
-                try:
-                    cookies = window.get_cookies()
-                    if cookies:
-                        extracted_cookies.clear()
-                        extracted_cookies.extend(cookies)
-                    time.sleep(1)
-                except Exception:
-                    break
-        
-        html = """
-        <!DOCTYPE html>
-        <html style="height: 100%; font-family: sans-serif;">
-        <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; margin: 0; background-color: #f4f4f9;">
-            <h2>Where would you like to log in?</h2>
-            <div style="display: flex; width: 80%; max-width: 600px; gap: 10px;">
-                <input type="text" id="url" placeholder="https://audiobooks.com" value="https://" style="flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px;">
-                <button onclick="var u = document.getElementById('url').value; if(!u.startsWith('http')) u = 'https://' + u; window.location.href = u;" style="padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Go</button>
-            </div>
-            <p style="margin-top: 20px; color: #666; text-align: center;">Enter the website above, click Go, sign in, and then close this window to capture your cookies.</p>
-        </body>
-        </html>
-        """
-        
-        try:
-            window = webview.create_window('Log in, then CLOSE this window', html=html, width=800, height=600)
-            webview.start(tracker, window, private_mode=False)
-            
-            if extracted_cookies:
-                temp_cookie_path = os.path.abspath("temp_webview_cookies.txt")
-                mcj = http.cookiejar.MozillaCookieJar(temp_cookie_path)
-                
-                for c in extracted_cookies:
-                    for key, morsel in c.items():
-                        cookie = http.cookiejar.Cookie(
-                            version=0,
-                            name=morsel.key,
-                            value=morsel.value,
-                            port=None, port_specified=False,
-                            domain=morsel['domain'] if morsel['domain'] else '',
-                            domain_specified=bool(morsel['domain']),
-                            domain_initial_dot=morsel['domain'].startswith('.') if morsel['domain'] else False,
-                            path=morsel['path'] if morsel['path'] else '/',
-                            path_specified=bool(morsel['path']),
-                            secure=bool(morsel['secure']),
-                            expires=None,
-                            discard=False,
-                            comment=None, comment_url=None, rest={'HttpOnly': None}, rfc2109=False
-                        )
-                        mcj.set_cookie(cookie)
-                
-                mcj.save(ignore_discard=True, ignore_expires=True)
-                
-                self.after(0, lambda: self.append_log(f"Successfully extracted cookies to {temp_cookie_path}"))
-                self.after(0, lambda: messagebox.showinfo("Cookies Captured", "Successfully captured login cookies!"))
-            else:
-                self.after(0, lambda: self.append_log("Browser closed, but no cookies were found."))
-                
-        except Exception as e:
-            self.after(0, lambda: self.append_log(f"Error running embedded browser: {str(e)}"))
-            self.after(0, lambda: messagebox.showerror("Browser Error", f"Failed to run embedded browser:\n{str(e)}"))
-        finally:
-            self.after(0, lambda: self.webview_button.configure(state="normal", text="Login via Embedded Browser (Gets Cookies)"))
+        temp_cookie_path = os.path.abspath("temp_webview_cookies.txt")
+        if os.path.exists(temp_cookie_path) and os.path.getmtime(temp_cookie_path) > getattr(self, '_last_cookie_time', 0):
+            self.after(0, lambda: self.append_log(f"Successfully extracted cookies to {temp_cookie_path}"))
+            self.after(0, lambda: messagebox.showinfo("Cookies Captured", "Successfully captured login cookies!"))
+            self._last_cookie_time = os.path.getmtime(temp_cookie_path)
+        else:
+            self.after(0, lambda: self.append_log("Browser closed, but no new cookies were found."))
 
     def browse_output(self):
         directory = filedialog.askdirectory(title="Select Output Directory")
@@ -293,5 +293,6 @@ class App(ctk.CTk):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     app = App()
     app.mainloop()
