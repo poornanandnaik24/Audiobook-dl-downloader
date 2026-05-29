@@ -69,12 +69,24 @@ def run_webview_process():
     finally:
         sys.exit(0)
 
+def get_resource_path(relative_path):
+    import sys, os
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
         self.title("Naik's Audiobook Downloader v1.0")
         self.geometry("700x600")
+
+        icon_path = get_resource_path("icon.ico")
+        if os.path.exists(icon_path):
+            self.iconbitmap(icon_path)
 
         # Configure grid layout
         self.grid_columnconfigure(1, weight=1)

@@ -7,6 +7,7 @@ OutputDir=dist
 OutputBaseFilename=Audiobook-dl-Windows-Installer
 Compression=lzma
 SolidCompression=yes
+SetupIconFile=icon.ico
 UninstallDisplayIcon={app}\Audiobook-dl-Windows.exe
 PrivilegesRequired=lowest
 
