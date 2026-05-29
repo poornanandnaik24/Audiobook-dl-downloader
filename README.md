@@ -1,4 +1,4 @@
-# Audiobook Downloader GUI
+# Naik's Audiobook Downloader
 
 A modern desktop application wrapper for downloading audiobooks from various online sources without needing to use the command line! This project provides an easy-to-use graphical interface with automatic browser cookie importing.
 
