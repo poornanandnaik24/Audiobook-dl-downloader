@@ -62,16 +62,9 @@ class App(ctk.CTk):
         self.password_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="Password", show="*")
         self.password_entry.grid(row=1, column=3, padx=(0, 10), pady=5, sticky="ew")
 
-        self.cookie_label = ctk.CTkLabel(self.auth_frame, text="Cookie File:")
-        self.cookie_label.grid(row=2, column=0, padx=10, pady=(5, 10), sticky="w")
-        self.cookie_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="Select cookies.txt")
-        self.cookie_entry.grid(row=2, column=1, columnspan=2, padx=(0, 10), pady=(5, 10), sticky="ew")
-        self.cookie_button = ctk.CTkButton(self.auth_frame, text="Browse", command=self.browse_cookie)
-        self.cookie_button.grid(row=2, column=3, padx=(0, 10), pady=(5, 10), sticky="ew")
-
         # Embedded Browser Login
         self.webview_button = ctk.CTkButton(self.auth_frame, text="Login via Embedded Browser (Gets Cookies)", command=self.open_embedded_browser)
-        self.webview_button.grid(row=3, column=0, columnspan=4, padx=10, pady=(5, 10), sticky="ew")
+        self.webview_button.grid(row=2, column=0, columnspan=4, padx=10, pady=(15, 10), sticky="ew")
 
         # Output Directory
         self.output_label = ctk.CTkLabel(self, text="Save To:")
@@ -100,15 +93,6 @@ class App(ctk.CTk):
             pyi_splash.close()
         except ImportError:
             pass
-
-    def browse_cookie(self):
-        filename = filedialog.askopenfilename(
-            title="Select Cookie File",
-            filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
-        )
-        if filename:
-            self.cookie_entry.delete(0, tk.END)
-            self.cookie_entry.insert(0, filename)
 
     def open_embedded_browser(self):
         url = self.url_entry.get().strip()
@@ -171,8 +155,6 @@ class App(ctk.CTk):
                 
                 mcj.save(ignore_discard=True, ignore_expires=True)
                 
-                self.after(0, lambda: self.cookie_entry.delete(0, tk.END))
-                self.after(0, lambda: self.cookie_entry.insert(0, temp_cookie_path))
                 self.after(0, lambda: self.append_log(f"Successfully extracted cookies to {temp_cookie_path}"))
                 self.after(0, lambda: messagebox.showinfo("Cookies Captured", "Successfully captured login cookies!"))
             else:
@@ -213,8 +195,8 @@ class App(ctk.CTk):
         if password:
             args.extend(["--password", password])
 
-        cookie_file = self.cookie_entry.get().strip()
-        if cookie_file:
+        cookie_file = os.path.abspath("temp_webview_cookies.txt")
+        if os.path.exists(cookie_file):
             args.extend(["--cookie", cookie_file])
 
         output_dir = self.output_entry.get().strip()
