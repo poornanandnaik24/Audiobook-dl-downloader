@@ -24,7 +24,7 @@ You can download the Windows installer from the repository:
 
 1. **Enter the Audiobook URL**: Paste the link to the audiobook you want to download in the URL field.
 2. Type your basic credentials directly into the Username and Password text boxes located right on the main window (Optional, if the site requires login).
-3. Alternatively, you can click **"Login via Embedded Browser"**, sign into your account on the webpage, and then close the browser window.
+3. Click **"Login via Embedded Browser"**, sign into your account on the webpage, and then close the browser window.
 4. **Choose Output Location**: Click "Browse" to select the folder where the audiobook should be saved.
 5. **Download**: Click the **Download** button and watch the live progress in the console log!
 
