@@ -144,12 +144,7 @@ class App(ctk.CTk):
         # Process handle
         self.process = None
 
-        # Close splash screen if running as PyInstaller bundle
-        try:
-            import pyi_splash
-            pyi_splash.close()
-        except ImportError:
-            pass
+        self.process = None
 
     def open_embedded_browser(self):
         # We must use multiprocessing because webview requires a main thread to run its GUI loop.
