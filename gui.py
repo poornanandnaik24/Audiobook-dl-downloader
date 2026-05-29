@@ -6,12 +6,6 @@ from tkinter import filedialog, messagebox
 import http.cookiejar
 import webbrowser
 
-try:
-    import browser_cookie3
-    BROWSER_COOKIE_AVAILABLE = True
-except ImportError:
-    BROWSER_COOKIE_AVAILABLE = False
-
 import customtkinter as ctk
 
 # Set appearance mode and color theme
@@ -75,23 +69,9 @@ class App(ctk.CTk):
         self.cookie_button = ctk.CTkButton(self.auth_frame, text="Browse", command=self.browse_cookie)
         self.cookie_button.grid(row=2, column=3, padx=(0, 10), pady=(5, 10), sticky="ew")
 
-        # Auto Import Cookies
-        self.auto_cookie_label = ctk.CTkLabel(self.auth_frame, text="Auto Import Cookies:")
-        self.auto_cookie_label.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="w")
-        
-        self.firefox_button = ctk.CTkButton(self.auth_frame, text="Import Firefox", command=lambda: self.import_browser_cookies("firefox"))
-        self.firefox_button.grid(row=3, column=1, padx=(0, 10), pady=(0, 10), sticky="ew")
-
-        self.chrome_button = ctk.CTkButton(self.auth_frame, text="Import Chrome", command=lambda: self.import_browser_cookies("chrome"))
-        self.chrome_button.grid(row=3, column=2, padx=(0, 10), pady=(0, 10), sticky="ew")
-
-        if not BROWSER_COOKIE_AVAILABLE:
-            self.chrome_button.configure(state="disabled")
-            self.firefox_button.configure(state="disabled")
-            self.auto_cookie_label.configure(text="Auto Import Cookies (browser-cookie3 missing):")
-
-        self.chrome_ext_button = ctk.CTkButton(self.auth_frame, text="Install 'Get cookies.txt locally' Extension for Chrome (Recommended)", fg_color="transparent", border_width=1, command=self.open_chrome_extension)
-        self.chrome_ext_button.grid(row=4, column=0, columnspan=4, padx=10, pady=(0, 10), sticky="ew")
+        # Embedded Browser Login
+        self.webview_button = ctk.CTkButton(self.auth_frame, text="Login via Embedded Browser (Gets Cookies)", command=self.open_embedded_browser)
+        self.webview_button.grid(row=3, column=0, columnspan=4, padx=10, pady=(5, 10), sticky="ew")
 
         # Output Directory
         self.output_label = ctk.CTkLabel(self, text="Save To:")
@@ -123,45 +103,85 @@ class App(ctk.CTk):
             self.cookie_entry.delete(0, tk.END)
             self.cookie_entry.insert(0, filename)
 
-    def import_browser_cookies(self, browser_name):
-        threading.Thread(target=self._extract_cookies_thread, args=(browser_name,), daemon=True).start()
+    def open_embedded_browser(self):
+        url = self.url_entry.get().strip()
+        if not url:
+            messagebox.showwarning("Missing URL", "Please enter an audiobook URL first so we know which site to log into!")
+            return
+            
+        parsed = urllib.parse.urlparse(url)
+        domain = f"{parsed.scheme}://{parsed.netloc}"
+        if not parsed.scheme:
+            domain = "https://" + url.split('/')[0]
+            
+        messagebox.showinfo("Instructions", f"A browser window will now open to {domain}.\n\nPlease log in to your account. Once you are fully logged in, CLOSE the browser window to automatically capture the cookies!")
+        
+        threading.Thread(target=self._run_webview_thread, args=(domain,), daemon=True).start()
 
-    def _extract_cookies_thread(self, browser_name):
-        self.after(0, lambda: self.append_log(f"Extracting cookies from {browser_name}, please wait..."))
-        self.after(0, lambda: self.chrome_button.configure(state="disabled"))
-        self.after(0, lambda: self.firefox_button.configure(state="disabled"))
+    def _run_webview_thread(self, domain):
+        self.after(0, lambda: self.webview_button.configure(state="disabled", text="Browser Open..."))
+        
+        extracted_cookies = []
+        
+        def tracker(window):
+            import time
+            while True:
+                try:
+                    cookies = window.get_cookies()
+                    if cookies:
+                        extracted_cookies.clear()
+                        extracted_cookies.extend(cookies)
+                    time.sleep(1)
+                except Exception:
+                    break
         
         try:
-            if browser_name == 'chrome':
-                cj = browser_cookie3.chrome()
-            else:
-                cj = browser_cookie3.firefox()
-                
-            temp_cookie_path = os.path.abspath(f"temp_{browser_name}_cookies.txt")
-            mcj = http.cookiejar.MozillaCookieJar(temp_cookie_path)
-            for cookie in cj:
-                mcj.set_cookie(cookie)
-            mcj.save(ignore_discard=True, ignore_expires=True)
+            window = webview.create_window('Log in, then CLOSE this window', domain, width=800, height=600)
+            webview.start(tracker, window, private_mode=False)
             
-            self.after(0, lambda: self.cookie_entry.delete(0, tk.END))
-            self.after(0, lambda: self.cookie_entry.insert(0, temp_cookie_path))
-            self.after(0, lambda: self.append_log(f"Successfully extracted {len(cj)} cookies to {temp_cookie_path}"))
-            self.after(0, lambda: messagebox.showinfo("Cookies Imported", f"Successfully extracted {len(cj)} cookies from {browser_name.title()}!"))
+            if extracted_cookies:
+                temp_cookie_path = os.path.abspath("temp_webview_cookies.txt")
+                mcj = http.cookiejar.MozillaCookieJar(temp_cookie_path)
+                
+                for c in extracted_cookies:
+                    for key, morsel in c.items():
+                        cookie = http.cookiejar.Cookie(
+                            version=0,
+                            name=morsel.key,
+                            value=morsel.value,
+                            port=None, port_specified=False,
+                            domain=morsel['domain'] if morsel['domain'] else urllib.parse.urlparse(domain).netloc,
+                            domain_specified=bool(morsel['domain']),
+                            domain_initial_dot=morsel['domain'].startswith('.') if morsel['domain'] else False,
+                            path=morsel['path'] if morsel['path'] else '/',
+                            path_specified=bool(morsel['path']),
+                            secure=bool(morsel['secure']),
+                            expires=None,
+                            discard=False,
+                            comment=None, comment_url=None, rest={'HttpOnly': None}, rfc2109=False
+                        )
+                        mcj.set_cookie(cookie)
+                
+                mcj.save(ignore_discard=True, ignore_expires=True)
+                
+                self.after(0, lambda: self.cookie_entry.delete(0, tk.END))
+                self.after(0, lambda: self.cookie_entry.insert(0, temp_cookie_path))
+                self.after(0, lambda: self.append_log(f"Successfully extracted cookies to {temp_cookie_path}"))
+                self.after(0, lambda: messagebox.showinfo("Cookies Captured", "Successfully captured login cookies!"))
+            else:
+                self.after(0, lambda: self.append_log("Browser closed, but no cookies were found."))
+                
         except Exception as e:
-            self.after(0, lambda: self.append_log(f"Error extracting cookies: {str(e)}"))
-            self.after(0, lambda: messagebox.showerror("Cookie Error", f"Failed to extract cookies from {browser_name.title()}:\n{str(e)}"))
+            self.after(0, lambda: self.append_log(f"Error running embedded browser: {str(e)}"))
+            self.after(0, lambda: messagebox.showerror("Browser Error", f"Failed to run embedded browser:\n{str(e)}"))
         finally:
-            self.after(0, lambda: self.chrome_button.configure(state="normal"))
-            self.after(0, lambda: self.firefox_button.configure(state="normal"))
+            self.after(0, lambda: self.webview_button.configure(state="normal", text="Login via Embedded Browser (Gets Cookies)"))
 
     def browse_output(self):
         directory = filedialog.askdirectory(title="Select Output Directory")
         if directory:
             self.output_entry.delete(0, tk.END)
             self.output_entry.insert(0, directory)
-
-    def open_chrome_extension(self):
-        webbrowser.open("https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc")
 
     def append_log(self, text):
         self.log_textbox.configure(state="normal")
