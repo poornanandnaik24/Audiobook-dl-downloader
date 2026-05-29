@@ -21,7 +21,7 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("Audiobook Downloader")
+        self.title("Audiobook Downloader v1.0")
         self.geometry("700x600")
 
         # Configure grid layout
@@ -33,11 +33,14 @@ class App(ctk.CTk):
         self.title_frame.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="ew")
         self.title_frame.grid_columnconfigure(0, weight=1)
         
-        self.title_label = ctk.CTkLabel(self.title_frame, text="Audiobook Downloader", font=ctk.CTkFont(size=20, weight="bold"))
+        self.title_label = ctk.CTkLabel(self.title_frame, text="Audiobook Downloader v1.0", font=ctk.CTkFont(size=20, weight="bold"))
         self.title_label.grid(row=0, column=0, sticky="w")
         
         self.sites_button = ctk.CTkButton(self.title_frame, text="Supported Sites", width=120, command=self.show_supported_sites)
         self.sites_button.grid(row=0, column=1, sticky="e")
+
+        self.about_button = ctk.CTkButton(self.title_frame, text="About", width=60, command=self.show_about)
+        self.about_button.grid(row=0, column=2, padx=(10, 0), sticky="e")
 
         # URL Input
         self.url_label = ctk.CTkLabel(self, text="URL:")
@@ -231,6 +234,9 @@ class App(ctk.CTk):
 
     def reset_button(self):
         self.download_button.configure(state="normal", text="Download")
+
+    def show_about(self):
+        messagebox.showinfo("About", "Audiobook Downloader v1.0\n\nContact: poornanandnaik24@gmail.com")
 
     def show_supported_sites(self):
         popup = ctk.CTkToplevel(self)
