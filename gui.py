@@ -8,6 +8,9 @@ import http.cookiejar
 import webbrowser
 import webview
 
+# Important: Import the downloader so PyInstaller bundles it!
+import audiobookdl.__main__
+
 import customtkinter as ctk
 
 # Set appearance mode and color theme
@@ -220,44 +223,52 @@ class App(ctk.CTk):
         self.download_button.configure(state="disabled", text="Downloading...")
         
         # Run in thread
-        threading.Thread(target=self.run_subprocess, args=(args,), daemon=True).start()
+        threading.Thread(
+            target=self.run_download_thread, 
+            args=(args,), 
+            daemon=True
+        ).start()
 
-    def run_subprocess(self, args):
+    def run_download_thread(self, args):
+        import sys
+        
+        class RedirectStdout:
+            def __init__(self, append_func):
+                self.append_func = append_func
+            def write(self, text):
+                if text.strip():
+                    self.append_func(text.strip())
+            def flush(self):
+                pass
+
+        old_argv = sys.argv
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        
         try:
-            # We use creationflags=subprocess.CREATE_NO_WINDOW on Windows to hide the console window
-            creationflags = 0
-            if os.name == 'nt':
-                creationflags = subprocess.CREATE_NO_WINDOW
-                
-            self.process = subprocess.Popen(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                creationflags=creationflags,
-                encoding='utf-8',
-                errors='replace'
-            )
-
-            for line in iter(self.process.stdout.readline, ''):
-                if line:
-                    self.after(0, self.append_log, line.strip())
-
-            self.process.stdout.close()
-            return_code = self.process.wait()
+            sys.argv = args
             
-            if return_code == 0:
-                self.after(0, self.append_log, "Download completed successfully.")
-                self.after(0, lambda: messagebox.showinfo("Success", "Download completed successfully."))
-            else:
-                self.after(0, self.append_log, f"Process finished with exit code {return_code}.")
-                self.after(0, lambda: messagebox.showerror("Error", f"Download failed with code {return_code}."))
-                
+            # Redirect prints to GUI
+            redirector = RedirectStdout(lambda t: self.after(0, self.append_log, t))
+            sys.stdout = redirector
+            sys.stderr = redirector
+            
+            # Execute the CLI tool directly from within this process
+            audiobookdl.__main__.main()
+            
+        except SystemExit as e:
+            # sys.exit() called by audiobookdl
+            if e.code != 0 and e.code is not None:
+                self.after(0, self.append_log, f"Exited with code {e.code}")
         except Exception as e:
             self.after(0, self.append_log, f"Error: {str(e)}")
-            self.after(0, lambda: messagebox.showerror("Error", f"An error occurred: {str(e)}"))
         finally:
-            self.after(0, self.reset_button)
+            # Restore stdout/stderr/argv
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            sys.argv = old_argv
+            self.after(0, self.append_log, "Download finished.")
+            self.after(0, lambda: self.download_button.configure(state="normal", text="Download"))
 
     def reset_button(self):
         self.download_button.configure(state="normal", text="Download")
