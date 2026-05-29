@@ -94,6 +94,13 @@ class App(ctk.CTk):
         # Process handle
         self.process = None
 
+        # Close splash screen if running as PyInstaller bundle
+        try:
+            import pyi_splash
+            pyi_splash.close()
+        except ImportError:
+            pass
+
     def browse_cookie(self):
         filename = filedialog.askopenfilename(
             title="Select Cookie File",
