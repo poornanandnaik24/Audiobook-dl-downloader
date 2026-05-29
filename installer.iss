@@ -13,7 +13,8 @@ PrivilegesRequired=lowest
 
 [Files]
 Source: "dist\Audiobook-dl-Windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "icon.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"
-Name: "{autodesktop}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"
+Name: "{group}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"; IconFilename: "{app}\icon.ico"
+Name: "{autodesktop}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"; IconFilename: "{app}\icon.ico"
