@@ -2,6 +2,8 @@
 
 A modern desktop application wrapper for downloading audiobooks from various online sources without needing to use the command line! This project provides an easy-to-use graphical interface with automatic browser cookie importing.
 
+If you are interested, please contact me on: poornanandnaik24@gmail.com
+
 ## Features
 
 - **Modern Interface**: Clean, dark-mode native desktop UI.
