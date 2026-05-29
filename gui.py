@@ -95,21 +95,11 @@ class App(ctk.CTk):
             pass
 
     def open_embedded_browser(self):
-        url = self.url_entry.get().strip()
-        if not url:
-            messagebox.showwarning("Missing URL", "Please enter an audiobook URL first so we know which site to log into!")
-            return
-            
-        parsed = urllib.parse.urlparse(url)
-        domain = f"{parsed.scheme}://{parsed.netloc}"
-        if not parsed.scheme:
-            domain = "https://" + url.split('/')[0]
-            
-        messagebox.showinfo("Instructions", f"A browser window will now open to {domain}.\n\nPlease log in to your account. Once you are fully logged in, CLOSE the browser window to automatically capture the cookies!")
+        messagebox.showinfo("Instructions", "A browser window will open.\n\n1. Type the website you want to log into (e.g., https://audiobooks.com) and click Go.\n2. Log in to your account.\n3. CLOSE the browser window to automatically capture the cookies!")
         
-        threading.Thread(target=self._run_webview_thread, args=(domain,), daemon=True).start()
+        threading.Thread(target=self._run_webview_thread, daemon=True).start()
 
-    def _run_webview_thread(self, domain):
+    def _run_webview_thread(self):
         self.after(0, lambda: self.webview_button.configure(state="disabled", text="Browser Open..."))
         
         extracted_cookies = []
@@ -126,8 +116,22 @@ class App(ctk.CTk):
                 except Exception:
                     break
         
+        html = """
+        <!DOCTYPE html>
+        <html style="height: 100%; font-family: sans-serif;">
+        <body style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; margin: 0; background-color: #f4f4f9;">
+            <h2>Where would you like to log in?</h2>
+            <div style="display: flex; width: 80%; max-width: 600px; gap: 10px;">
+                <input type="text" id="url" placeholder="https://audiobooks.com" value="https://" style="flex: 1; padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 5px;">
+                <button onclick="var u = document.getElementById('url').value; if(!u.startsWith('http')) u = 'https://' + u; window.location.href = u;" style="padding: 10px 20px; font-size: 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Go</button>
+            </div>
+            <p style="margin-top: 20px; color: #666; text-align: center;">Enter the website above, click Go, sign in, and then close this window to capture your cookies.</p>
+        </body>
+        </html>
+        """
+        
         try:
-            window = webview.create_window('Log in, then CLOSE this window', domain, width=800, height=600)
+            window = webview.create_window('Log in, then CLOSE this window', html=html, width=800, height=600)
             webview.start(tracker, window, private_mode=False)
             
             if extracted_cookies:
@@ -141,7 +145,7 @@ class App(ctk.CTk):
                             name=morsel.key,
                             value=morsel.value,
                             port=None, port_specified=False,
-                            domain=morsel['domain'] if morsel['domain'] else urllib.parse.urlparse(domain).netloc,
+                            domain=morsel['domain'] if morsel['domain'] else '',
                             domain_specified=bool(morsel['domain']),
                             domain_initial_dot=morsel['domain'].startswith('.') if morsel['domain'] else False,
                             path=morsel['path'] if morsel['path'] else '/',
