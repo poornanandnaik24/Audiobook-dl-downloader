@@ -8,7 +8,7 @@ If you are interested, please contact me on: poornanandnaik24@gmail.com
 
 - **Modern Interface**: Clean, dark-mode native desktop UI.
 - **Easy Authentication**:
-  - Automatically extract authentication cookies directly from Chrome or Firefox with one click.
+  - Securely log in to any site using the built-in Embedded Browser. Once you close the browser, your cookies are automatically captured for downloading.
   - Or manually load your own `cookies.txt` file.
   - Basic Username and Password login support for specific services.
 - **Live Output**: Real-time console streaming so you can monitor your download progress directly in the app.
@@ -16,14 +16,14 @@ If you are interested, please contact me on: poornanandnaik24@gmail.com
 
 ## Download for Windows
 
-You can download the ready-to-use Windows application from the repository:
-1. Download [Audiobook-dl-Windows.exe](dist/Audiobook-dl-Windows.exe)
-2. Double-click to run! (No installation required)
+You can download the Windows installer from the repository:
+1. Download [Audiobook-dl-Installer.exe](dist/Audiobook-dl-Installer.exe)
+2. Double-click to run the setup. It will install the application and automatically create a desktop shortcut for you!
 
 ## How to use
 1. Paste the **URL** of the audiobook you want to download.
 2. Select your output folder.
-3. If the site requires a login, either enter your credentials or use the **Import Firefox / Import Chrome** buttons to automatically pull in your active sessions.
+3. If the site requires a login, simply click **Login via Embedded Browser**, sign in to the platform, and close the window. Your authentication cookies will be automatically extracted!
 4. Click **Download**. 
 
 ## Building for Mac
