@@ -1,0 +1,271 @@
+import os
+import subprocess
+import threading
+import tkinter as tk
+from tkinter import filedialog, messagebox
+import http.cookiejar
+
+try:
+    import browser_cookie3
+    BROWSER_COOKIE_AVAILABLE = True
+except ImportError:
+    BROWSER_COOKIE_AVAILABLE = False
+
+import customtkinter as ctk
+
+# Set appearance mode and color theme
+ctk.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
+ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+
+        self.title("Audiobook Downloader")
+        self.geometry("700x600")
+
+        # Configure grid layout
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(6, weight=1)
+
+        # Title Frame
+        self.title_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.title_frame.grid(row=0, column=0, columnspan=3, padx=20, pady=(20, 10), sticky="ew")
+        self.title_frame.grid_columnconfigure(0, weight=1)
+        
+        self.title_label = ctk.CTkLabel(self.title_frame, text="Audiobook Downloader", font=ctk.CTkFont(size=20, weight="bold"))
+        self.title_label.grid(row=0, column=0, sticky="w")
+        
+        self.sites_button = ctk.CTkButton(self.title_frame, text="Supported Sites", width=120, command=self.show_supported_sites)
+        self.sites_button.grid(row=0, column=1, sticky="e")
+
+        # URL Input
+        self.url_label = ctk.CTkLabel(self, text="URL:")
+        self.url_label.grid(row=1, column=0, padx=20, pady=10, sticky="w")
+        self.url_entry = ctk.CTkEntry(self, placeholder_text="Enter audiobook URL")
+        self.url_entry.grid(row=1, column=1, columnspan=2, padx=(0, 20), pady=10, sticky="ew")
+
+        # Authentication Frame
+        self.auth_frame = ctk.CTkFrame(self)
+        self.auth_frame.grid(row=2, column=0, columnspan=3, padx=20, pady=10, sticky="ew")
+        self.auth_frame.grid_columnconfigure(1, weight=1)
+        self.auth_frame.grid_columnconfigure(3, weight=1)
+
+        self.auth_label = ctk.CTkLabel(self.auth_frame, text="Authentication (Optional, depending on source)", font=ctk.CTkFont(weight="bold"))
+        self.auth_label.grid(row=0, column=0, columnspan=4, padx=10, pady=(10, 5), sticky="w")
+
+        self.username_label = ctk.CTkLabel(self.auth_frame, text="Username:")
+        self.username_label.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.username_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="Username")
+        self.username_entry.grid(row=1, column=1, padx=(0, 10), pady=5, sticky="ew")
+
+        self.password_label = ctk.CTkLabel(self.auth_frame, text="Password:")
+        self.password_label.grid(row=1, column=2, padx=10, pady=5, sticky="w")
+        self.password_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="Password", show="*")
+        self.password_entry.grid(row=1, column=3, padx=(0, 10), pady=5, sticky="ew")
+
+        self.cookie_label = ctk.CTkLabel(self.auth_frame, text="Cookie File:")
+        self.cookie_label.grid(row=2, column=0, padx=10, pady=(5, 10), sticky="w")
+        self.cookie_entry = ctk.CTkEntry(self.auth_frame, placeholder_text="Select cookies.txt")
+        self.cookie_entry.grid(row=2, column=1, columnspan=2, padx=(0, 10), pady=(5, 10), sticky="ew")
+        self.cookie_button = ctk.CTkButton(self.auth_frame, text="Browse", command=self.browse_cookie)
+        self.cookie_button.grid(row=2, column=3, padx=(0, 10), pady=(5, 10), sticky="ew")
+
+        # Auto Import Cookies
+        self.auto_cookie_label = ctk.CTkLabel(self.auth_frame, text="Auto Import Cookies:")
+        self.auto_cookie_label.grid(row=3, column=0, padx=10, pady=(0, 10), sticky="w")
+        
+        self.firefox_button = ctk.CTkButton(self.auth_frame, text="Import Firefox", command=lambda: self.import_browser_cookies("firefox"))
+        self.firefox_button.grid(row=3, column=1, padx=(0, 10), pady=(0, 10), sticky="ew")
+
+        self.chrome_button = ctk.CTkButton(self.auth_frame, text="Import Chrome", command=lambda: self.import_browser_cookies("chrome"))
+        self.chrome_button.grid(row=3, column=2, padx=(0, 10), pady=(0, 10), sticky="ew")
+
+        if not BROWSER_COOKIE_AVAILABLE:
+            self.chrome_button.configure(state="disabled")
+            self.firefox_button.configure(state="disabled")
+            self.auto_cookie_label.configure(text="Auto Import Cookies (browser-cookie3 missing):")
+
+        # Output Directory
+        self.output_label = ctk.CTkLabel(self, text="Save To:")
+        self.output_label.grid(row=3, column=0, padx=20, pady=10, sticky="w")
+        self.output_entry = ctk.CTkEntry(self, placeholder_text="Select Output Directory")
+        self.output_entry.grid(row=3, column=1, padx=(0, 10), pady=10, sticky="ew")
+        self.output_button = ctk.CTkButton(self, text="Browse", command=self.browse_output)
+        self.output_button.grid(row=3, column=2, padx=(0, 20), pady=10)
+
+        # Download Button
+        self.download_button = ctk.CTkButton(self, text="Download", command=self.start_download)
+        self.download_button.grid(row=4, column=0, columnspan=3, padx=20, pady=20)
+
+        # Output Log Text Box
+        self.log_label = ctk.CTkLabel(self, text="Log Output:")
+        self.log_label.grid(row=5, column=0, padx=20, pady=(10, 0), sticky="w")
+        self.log_textbox = ctk.CTkTextbox(self, state="disabled")
+        self.log_textbox.grid(row=6, column=0, columnspan=3, padx=20, pady=(0, 20), sticky="nsew")
+
+        # Process handle
+        self.process = None
+
+    def browse_cookie(self):
+        filename = filedialog.askopenfilename(
+            title="Select Cookie File",
+            filetypes=(("Text files", "*.txt"), ("All files", "*.*"))
+        )
+        if filename:
+            self.cookie_entry.delete(0, tk.END)
+            self.cookie_entry.insert(0, filename)
+
+    def import_browser_cookies(self, browser_name):
+        threading.Thread(target=self._extract_cookies_thread, args=(browser_name,), daemon=True).start()
+
+    def _extract_cookies_thread(self, browser_name):
+        self.after(0, lambda: self.append_log(f"Extracting cookies from {browser_name}, please wait..."))
+        self.after(0, lambda: self.chrome_button.configure(state="disabled"))
+        self.after(0, lambda: self.firefox_button.configure(state="disabled"))
+        
+        try:
+            if browser_name == 'chrome':
+                cj = browser_cookie3.chrome()
+            else:
+                cj = browser_cookie3.firefox()
+                
+            temp_cookie_path = os.path.abspath(f"temp_{browser_name}_cookies.txt")
+            mcj = http.cookiejar.MozillaCookieJar(temp_cookie_path)
+            for cookie in cj:
+                mcj.set_cookie(cookie)
+            mcj.save(ignore_discard=True, ignore_expires=True)
+            
+            self.after(0, lambda: self.cookie_entry.delete(0, tk.END))
+            self.after(0, lambda: self.cookie_entry.insert(0, temp_cookie_path))
+            self.after(0, lambda: self.append_log(f"Successfully extracted {len(cj)} cookies to {temp_cookie_path}"))
+            self.after(0, lambda: messagebox.showinfo("Cookies Imported", f"Successfully extracted {len(cj)} cookies from {browser_name.title()}!"))
+        except Exception as e:
+            self.after(0, lambda: self.append_log(f"Error extracting cookies: {str(e)}"))
+            self.after(0, lambda: messagebox.showerror("Cookie Error", f"Failed to extract cookies from {browser_name.title()}:\n{str(e)}"))
+        finally:
+            self.after(0, lambda: self.chrome_button.configure(state="normal"))
+            self.after(0, lambda: self.firefox_button.configure(state="normal"))
+
+    def browse_output(self):
+        directory = filedialog.askdirectory(title="Select Output Directory")
+        if directory:
+            self.output_entry.delete(0, tk.END)
+            self.output_entry.insert(0, directory)
+
+    def append_log(self, text):
+        self.log_textbox.configure(state="normal")
+        self.log_textbox.insert(tk.END, text + "\n")
+        self.log_textbox.see(tk.END)
+        self.log_textbox.configure(state="disabled")
+
+    def start_download(self):
+        url = self.url_entry.get().strip()
+        if not url:
+            messagebox.showwarning("Missing URL", "Please enter an audiobook URL.")
+            return
+
+        # Prepare arguments
+        args = ["audiobook-dl"]
+        
+        username = self.username_entry.get().strip()
+        if username:
+            args.extend(["--username", username])
+            
+        password = self.password_entry.get()
+        if password:
+            args.extend(["--password", password])
+
+        cookie_file = self.cookie_entry.get().strip()
+        if cookie_file:
+            args.extend(["--cookie", cookie_file])
+
+        output_dir = self.output_entry.get().strip()
+        if output_dir:
+            args.extend(["--output", os.path.join(output_dir, "{title}")])
+
+        args.append(url)
+
+        self.append_log(f"Starting download: {' '.join(args)}")
+        self.download_button.configure(state="disabled", text="Downloading...")
+        
+        # Run in thread
+        threading.Thread(target=self.run_subprocess, args=(args,), daemon=True).start()
+
+    def run_subprocess(self, args):
+        try:
+            # We use creationflags=subprocess.CREATE_NO_WINDOW on Windows to hide the console window
+            creationflags = 0
+            if os.name == 'nt':
+                creationflags = subprocess.CREATE_NO_WINDOW
+                
+            self.process = subprocess.Popen(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                creationflags=creationflags,
+                encoding='utf-8',
+                errors='replace'
+            )
+
+            for line in iter(self.process.stdout.readline, ''):
+                if line:
+                    self.after(0, self.append_log, line.strip())
+
+            self.process.stdout.close()
+            return_code = self.process.wait()
+            
+            if return_code == 0:
+                self.after(0, self.append_log, "Download completed successfully.")
+                self.after(0, lambda: messagebox.showinfo("Success", "Download completed successfully."))
+            else:
+                self.after(0, self.append_log, f"Process finished with exit code {return_code}.")
+                self.after(0, lambda: messagebox.showerror("Error", f"Download failed with code {return_code}."))
+                
+        except Exception as e:
+            self.after(0, self.append_log, f"Error: {str(e)}")
+            self.after(0, lambda: messagebox.showerror("Error", f"An error occurred: {str(e)}"))
+        finally:
+            self.after(0, self.reset_button)
+
+    def reset_button(self):
+        self.download_button.configure(state="normal", text="Download")
+
+    def show_supported_sites(self):
+        popup = ctk.CTkToplevel(self)
+        popup.title("Supported Sites")
+        popup.geometry("400x350")
+        # Ensure the popup is on top
+        popup.attributes("-topmost", True)
+        popup.focus()
+        
+        label = ctk.CTkLabel(popup, text="Supported Services:", font=ctk.CTkFont(size=16, weight="bold"))
+        label.pack(pady=(10, 5))
+        
+        scroll_frame = ctk.CTkScrollableFrame(popup)
+        scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        sites = [
+            "audiobooks.com (Cookies)",
+            "Blinkist (Cookies)",
+            "Chirp (Cookies)",
+            "eReolen (Cookies & Login)",
+            "Everand / Scribd (Cookies)",
+            "Librivox (No auth required)",
+            "Nextory (Login)",
+            "Overdrive (Cookies)",
+            "Podimo (Login)",
+            "Saxo (Login)",
+            "Storytel / Mofibo (Login)",
+            "YourCloudLibrary (Cookies & Login)"
+        ]
+        
+        for site in sites:
+            site_label = ctk.CTkLabel(scroll_frame, text=f"• {site}", font=ctk.CTkFont(size=13))
+            site_label.pack(anchor="w", pady=2, padx=10)
+
+
+if __name__ == "__main__":
+    app = App()
+    app.mainloop()
