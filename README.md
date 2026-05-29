@@ -1,132 +1,56 @@
-# audiobook-dl
-![GitHub release](https://img.shields.io/github/v/release/jo1gi/audiobook-dl)
-![GitHub top language](https://img.shields.io/github/languages/top/jo1gi/audiobook-dl)
-![License](https://img.shields.io/github/license/jo1gi/audiobook-dl)
+# Audiobook Downloader GUI
 
-CLI tool for downloading audiobooks from online sources.
+A modern desktop application wrapper for downloading audiobooks from various online sources without needing to use the command line! This project provides an easy-to-use graphical interface with automatic browser cookie importing.
 
-## Maintainers
-I'm currently looking for maintainers to support the different services. I
-don't use all the services and have a hard time keeping up the support.
+## Features
 
-If you are interested, please contact me on:
-- Matrix: jo1gi:matrix.org
-- XMPP: verdantislet@movim.eu
+- **Modern Interface**: Clean, dark-mode native desktop UI.
+- **Easy Authentication**:
+  - Automatically extract authentication cookies directly from Chrome or Firefox with one click.
+  - Or manually load your own `cookies.txt` file.
+  - Basic Username and Password login support for specific services.
+- **Live Output**: Real-time console streaming so you can monitor your download progress directly in the app.
+- **Supported Sites Viewer**: Built-in viewer to quickly check which platforms are supported and what authentication they require.
+
+## Download for Windows
+
+You can download the ready-to-use Windows application from the repository:
+1. Download [Audiobook-dl-Windows.exe](dist/Audiobook-dl-Windows.exe)
+2. Double-click to run! (No installation required)
+
+## How to use
+1. Paste the **URL** of the audiobook you want to download.
+2. Select your output folder.
+3. If the site requires a login, either enter your credentials or use the **Import Firefox / Import Chrome** buttons to automatically pull in your active sessions.
+4. Click **Download**. 
+
+## Building for Mac
+
+The Python GUI code (`gui.py`) is fully cross-platform! If you are on macOS, you can easily build your own `.app` bundle:
+
+1. Open your Mac Terminal.
+2. Navigate to this downloaded repository folder.
+3. Run the included build script:
+   ```bash
+   chmod +x build_mac.sh
+   ./build_mac.sh
+   ```
+4. Once completed, your new `audiobook-dl-gui.app` will be located in the `dist/` folder.
 
 ## Supported Services
-audiobook-dl currently supports downloading from the following sources:
-- [audiobooks.com](https://audiobooks.com)
-- [Blinkist](https://www.blinkist.com)
-- [Chirp](https://www.chirpbooks.com/)
-- [eReolen](https://ereolen.dk)
-- [Everand (previously Scribd)](https://everand.com)
-- [Librivox](https://librivox.org)
-- [Nextory](https://nextory.com)
-- [Overdrive](https://www.overdrive.com/)
-- [Podimo](https://podimo.com)
-- [Saxo](https://saxo.com)
-- [Storytel](https://www.storytel.com/) / [Mofibo](https://mofibo.com)
-- [YourCloudLibrary](https://www.yourcloudlibrary.com/)
+Currently supports downloading from the following sources (Check the "Supported Sites" button in the app for details):
+- audiobooks.com
+- Blinkist
+- Chirp
+- eReolen
+- Everand (Scribd)
+- Librivox
+- Nextory
+- Overdrive
+- Podimo
+- Saxo
+- Storytel / Mofibo
+- YourCloudLibrary
 
-[More info](./supported_sites.md)
-
-## Installation
-audiobook-dl can be installed from the repo itself or through pip.
-
-To get the newest stable version with pip run:
-```shell
-pip install audiobook-dl
-```
-
-If you want to use the newest version (can be unstable) run:
-```shell
-pip install "git+https://github.com/jo1gi/audiobook-dl.git"
-```
-or
-```shell
-git clone https://github.com/jo1gi/audiobook-dl.git
-cd audiobook-dl
-python3 setup.py install
-```
-
-Some features require [ffmpeg](https://ffmpeg.org/) which can be installed
-through most package managers or from [ffmpeg.org/download.html](https://ffmpeg.org/download.html).
-
-## Authentication
-
-### Cookies
-audiobook-dl uses Netscape cookie files for authentication in most cases. I use
-[this](https://github.com/rotemdan/ExportCookies) extension to export my cookies
-from the browser.
-
-Cookies can be placed in current dir as `cookies.txt` or be given with the
-`--cookie` argument.
-
-### Login
-[Some sources](./supported_sites.md) support authentication through login with
-username and password (and sometimes library). Use the `--username` and
-`--password` arguments or enter them through an interactive prompt.
-
-## Downloading audiobooks
-```shell
-audiobook-dl -c <cookie file> <url>
-```
-**Most sites require you to provide the listening page not not just the
-information page**
-
-## Arguments
-
-| Argument          | Value                                                             |
-|-------------------|-------------------------------------------------------------------|
-| url               | The url of the page where you listen to the audiobook             |
-| -c/--cookie       | Path to a Netscape cookie file                                    |
-| --combine         | Combine all output files into a single file (requires ffmpeg)     |
-| --cover           | Only download cover                                               |
-| -d/--debug        | Print debug information                                           |
-| -o/--output       | Output location                                                   |
-| --remove-chars    | List of characters that will be removed from output path          |
-| --no-chapters     | Don't include chapters in output file                             |
-| --output-format   | Output file format                                                |
-| --verbose-ffmpeg | Show ffmpeg output in terminal                                    |
-| --username        | Username to source (Required when using login)                    |
-| --password        | Password to source (Required when using login)                    |
-| --library         | Specific library on service (Sometimes required when using login) |
-
-## Output
-By default, audiobook-dl saves all audiobooks to `{title}` relative to the
-current path. This can be changed with the `--output` argument. Path can be
-customized by audiobook with the following fields:
-- `title`
-- `author`
-- `series`
-- `narrator`
-
-Not all fields are available for all audiobooks.
-
-The file extension can be changed with the `--output-format` argument.
-
-## Configuration
-audiobook-dl can be configured using a configuration file, which should be placed at:
-- Windows: `C:\\Users\\$user\\AppData\\Local\\jo1gi\\audiobook-dl\\audiobook-dl.toml`
-- Mac: `/Users/$user/Library/Application Support/audiobook-dl/audiobook-dl.toml`
-- Linux `$XDG_CONFIG_DIR/audiobook-dl/audiobook-dl.toml`
-
-### Authentications
-Source credentials can be provided in the configuration file:
-```toml
-[sources.yourcloudlibrary]
-username = "yourusername"
-password = "supersecretpassword"
-library = "hometown"
-```
-
-Cookie files can be specified in a similar way:
-```toml
-[sources.everand]
-cookie_file = "./everand_cookies.txt"
-```
-Paths are relative to the configuration directory.
-
-## Contributions
-Issues, bug-reports, pull requests or ideas for features and improvements are
-**very welcome**.
+---
+*This GUI is built on top of the original [audiobook-dl](https://github.com/jo1gi/audiobook-dl) CLI tool.*
