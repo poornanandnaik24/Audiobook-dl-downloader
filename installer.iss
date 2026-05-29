@@ -1,0 +1,18 @@
+[Setup]
+AppName=Naik's Audiobook Downloader
+AppVersion=1.0
+DefaultDirName={autopf}\Audiobook-dl
+DefaultGroupName=Naik's Audiobook Downloader
+OutputDir=dist
+OutputBaseFilename=Audiobook-dl-Windows-Installer
+Compression=lzma
+SolidCompression=yes
+UninstallDisplayIcon={app}\Audiobook-dl-Windows.exe
+PrivilegesRequired=lowest
+
+[Files]
+Source: "dist\Audiobook-dl-Windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Icons]
+Name: "{group}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"
+Name: "{autodesktop}\Naik's Audiobook Downloader"; Filename: "{app}\Audiobook-dl-Windows.exe"
